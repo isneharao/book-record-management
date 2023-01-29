@@ -1,6 +1,14 @@
 const express = require("express");
+const {
+  getAllBooks ,
+  getSingleBooksById,
+  getAllIssuedBooks, 
+  addNewBook,
+  updateBookById,} = require("../controllers/book-controller");
+  
 const { books } = require("../data/books.json");
 const { users } = require("../data/users.json");
+const { UserModel, BookModel } = require("../models/server");
 
 const router = express.Router();
 
@@ -11,12 +19,7 @@ const router = express.Router();
  * Access: Public
  * Parmanters: none
  */
-router.get("/", (req, res) => {
-  res.status(200).json({
-    success: true,
-    data: books,
-  });
-});
+router.get("/", getAllBooks);
 
 /**
  * Route: /books/:id
@@ -25,17 +28,7 @@ router.get("/", (req, res) => {
  * Access: Public
  * Parmanters: id
  */
-router.get("/:id", (req, res) => {
-  const { id } = req.params;
-  const book = books.find((each) => each.id === id);
-
-  if (!book) {
-    return res
-      .status(404)
-      .json({ success: false, message: "book not exist this id" });
-  }
-  return res.status(200).json({ success: true, data: book });
-});
+router.get("/:id", getSingleBooksById);
 
 /**
  * Route: /books/issued/by-user
@@ -45,28 +38,7 @@ router.get("/:id", (req, res) => {
  * Parmanters: none
  */
 
-router.get("/issued/by-user", (req, res) => {
-  const usersWithIssuedBook = users.filter((each) => {
-    if (each.issuedBook) {
-      return each;
-    }
-  });
-  const issuedBooks = [];
-  usersWithIssuedBook.forEach((each) => {
-    const book = books.find((book) => book.id === each.issuedBook);
-    book.issuedby = each.name;
-    book.issuedDate = each.issuedDate;
-    book.returnDate = each.returnDate;
-
-    issuedBooks.push(book);
-  });
-  if (issuedBooks.length === 0) {
-    return res
-      .status(404)
-      .json({ success: false, message: "no books has been issued" });
-  }
-  return res.status(200).json({ message: true, data: issuedBooks });
-});
+router.get("/issued/by-user", getAllIssuedBooks);
 
 /**
  * Route: /books
@@ -75,28 +47,7 @@ router.get("/issued/by-user", (req, res) => {
  * Access: Public
  * Parmanters: none
  */
-router.post("/", (req, res) => {
-  const { data } = req.body;
-  if (!data) {
-    return res
-      .status(400)
-      .json({ success: false, message: "No Data was provided" });
-  }
-  const book = books.find((each) => each.id === data.id);
-  if (book) {
-    return res
-      .status(404)
-      .json({
-        success: false,
-        message: "Stating books already exist with the same id",
-      });
-  }
-  const allBooks = [...books, data];
-  return res.status(200).json({
-    success: true,
-    data: allBooks,
-  });
-});
+router.post("/", addNewBook);
 
 /**
  * Route: /books/:id
@@ -106,30 +57,7 @@ router.post("/", (req, res) => {
  * Parmanters: id
  */
 
-router.put("/:id", (req, res) => {
-  const { id } = req.params;
-  const { data } = req.body;
-  const book = books.find((each) => each.id === id);
-  if (!book) {
-    res
-      .status(404)
-      .json({
-        success: false,
-        message: "Book Not Found with that perticular id",
-      });
-  }
-
-  const updatedData = books.map((each) => {
-    if (each.id === id) {
-      return { ...each, ...data };
-    }
-    return each;
-  });
-  res.status(200).json({
-    success: true,
-    data: updatedData,
-  });
-});
+router.put("/:id", updateBookById);
 
 /**
  * Route:/users/subscription-details/{id}
@@ -139,55 +67,56 @@ router.put("/:id", (req, res) => {
  * Parmanters: id
  */
 
-router.get("/subscription-details/:id", (req, res) => {
-  const { id } = req.params;
-  const user = users.find((each) => each.id === id);
-  if (!user) {
-    res.status(404).json({
-      success: false,
-      message: "user is not found",
-    });
-  }
-  const getDateInDay = (data = "") => {
-    let date;
-    if (data === "") {
-      //current date
-      date = new Date();
-    } else {
-      // getting date on basics of variable
-      date = new Date(data);
-    }
 
-    let days = Math.floor(data / (1000 * 60 * 60 * 24));
-    return days;
-  };
+// router.get("/subscription-details/:id", (req, res) => {
+//   const { id } = req.params;
+//   const user = users.find((each) => each.id === id);
+//   if (!user) {
+//     res.status(404).json({
+//       success: false,
+//       message: "user is not found",
+//     });
+//   }
+//   const getDateInDay = (data = "") => {
+//     let date;
+//     if (data === "") {
+//       //current date
+//       date = new Date();
+//     } else {
+//       // getting date on basics of variable
+//       date = new Date(data);
+//     }
 
-  const subscriptionType = (data) => {
-    if (users.subscriptionType === "Basic") {
-      date = date + 90;
-    } else if (users.subscriptionType === "Standard") {
-      date = date + 180;
-    } else if (users.subscriptionType === "Premium") {
-      date = date + 365;
-    }
-    return date;
-  };
+//     let days = Math.floor(data / (1000 * 60 * 60 * 24));
+//     return days;
+//   };
 
-  // subscription calc here
-  // date always be calculate from jan 1, year 1970 for subscription
-  let returnDate = getDateInDay(user.returnDate);
-  let currentDate = getDateInDay();
-  let subscriptionDate = getDateInDay(user.subscriptionDate);
-  let subscriptionExpiration = subscriptionType(subscriptionDate);
+//   const subscriptionType = (data) => {
+//     if (users.subscriptionType === "Basic") {
+//       date = date + 90;
+//     } else if (users.subscriptionType === "Standard") {
+//       date = date + 180;
+//     } else if (users.subscriptionType === "Premium") {
+//       date = date + 365;
+//     }
+//     return date;
+//   };
 
-  const data = {
-    ...user,
-    subscriptionExpired : subscriptionExpiration < currentDate,
-    daysLeftForExpiration : subscriptionExpiration <= currentDate ? 0 :subscriptionExpiration - currentDate,
-    fine : returnDate < currentDate ? subscriptionExpiration <= currentDate ? 200 : 100 : 0,
-  };
-  return res.status(200).json({success:true, data});
-});
+//   // subscription calc here
+//   // date always be calculate from jan 1, year 1970 for subscription
+//   let returnDate = getDateInDay(user.returnDate);
+//   let currentDate = getDateInDay();
+//   let subscriptionDate = getDateInDay(user.subscriptionDate);
+//   let subscriptionExpiration = subscriptionType(subscriptionDate);
+
+//   const data = {
+//     ...user,
+//     subscriptionExpired : subscriptionExpiration < currentDate,
+//     daysLeftForExpiration : subscriptionExpiration <= currentDate ? 0 :subscriptionExpiration - currentDate,
+//     fine : returnDate < currentDate ? subscriptionExpiration <= currentDate ? 200 : 100 : 0,
+//   };
+//   return res.status(200).json({success:true, data});
+// });
 
 //default export
 module.exports = router;
